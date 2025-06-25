@@ -24,14 +24,13 @@ export default class Game extends Phaser.Scene {
     console.log('Loading assets...');
     this.load.image('player', 'assets/player.png');
     this.load.image('coin', 'assets/coin.png');
-    this.load.image('obstacle', 'https://via.placeholder.com/70x70.png?text=Wall'); // Placeholder wall
-    this.load.image('speedBoost', 'https://via.placeholder.com/40x40.png?text=Speed'); // Placeholder speed boost
-    this.load.audio('coin', 'assets/coin.wav'); // Add coin.wav from freesound.org
-    this.load.audio('powerUp', 'https://www.soundjay.com/buttons/beep-01a.mp3'); // Placeholder power-up sound
+    this.load.image('obstacle', 'https://via.placeholder.com/70x70.png?text=Wall');
+    this.load.image('speedBoost', 'https://via.placeholder.com/40x40.png?text=Speed');
+    this.load.audio('coin', 'assets/coin.wav');
+    this.load.audio('powerUp', 'https://www.soundjay.com/buttons/beep-01a.mp3');
   }
 
   create() {
-    // Draw 7x7 grid
     const graphics = this.add.graphics({ lineStyle: { width: 2, color: 0xaaaaaa } });
     for (let x = 0; x <= this.gridSize; x++) {
       for (let y = 0; y <= this.gridSize; y++) {
@@ -39,7 +38,6 @@ export default class Game extends Phaser.Scene {
       }
     }
 
-    // Add obstacles (random walls)
     for (let i = 0; i < 5; i++) {
       const x = Phaser.Math.Between(1, this.gridSize - 2) * this.cellSize + 40;
       const y = Phaser.Math.Between(1, this.gridSize - 2) * this.cellSize + 40;
@@ -47,42 +45,54 @@ export default class Game extends Phaser.Scene {
       this.obstacles.push(obstacle);
     }
 
-    // Add single player
     this.players[this.playerId] = this.add.sprite(40, 40, 'player').setScale(0.5).setOrigin(0, 0);
     console.log('Player created at:', this.players[this.playerId].x, this.players[this.playerId].y);
 
-    // UI elements
     this.scoreText = this.add.text(10, 10, `Score: ${this.score}`, { font: '16px Arial', color: '#ffffff' });
     this.healthText = this.add.text(10, 30, `Health: ${this.health}%`, { font: '16px Arial', color: '#ff4444' });
     this.timerText = this.add.text(10, 50, 'Time: 90', { font: '16px Arial', color: '#ffffff' });
     this.powerUpText = this.add.text(10, 70, 'Power-Ups: None', { font: '16px Arial', color: '#ffff00' });
 
-    // Keyboard input with cursors
-    const cursors = this.input.keyboard ? this.input.keyboard.createCursorKeys() : null;
-    if (this.input.keyboard) {
-      this.input.keyboard.on('keydown', (event: KeyboardEvent) => {
-        console.log('Key pressed:', event.key);
-        const player = this.players[this.playerId];
-        let newX = player.x;
-        let newY = player.y;
-        if ((event.key === 'ArrowUp' || (cursors && cursors.up.isDown)) && this.canMove(player.x, newY - this.cellSize)) newY -= this.cellSize * this.speed;
-        if ((event.key === 'ArrowDown' || (cursors && cursors.down.isDown)) && this.canMove(player.x, newY + this.cellSize)) newY += this.cellSize * this.speed;
-        if ((event.key === 'ArrowLeft' || (cursors && cursors.left.isDown)) && this.canMove(newX - this.cellSize, player.y)) newX -= this.cellSize * this.speed;
-        if ((event.key === 'ArrowRight' || (cursors && cursors.right.isDown)) && this.canMove(newX + this.cellSize, player.y)) newX += this.cellSize * this.speed;
+    const cursors = this.input.keyboard?.createCursorKeys();
+    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+      console.log('Key pressed:', event.key);
+      const player = this.players[this.playerId];
+      let newX = player.x;
+      let newY = player.y;
+      if (
+        (event.key === 'ArrowUp' || (cursors && cursors.up && cursors.up.isDown)) &&
+        this.canMove(player.x, newY - this.cellSize)
+      ) {
+        newY -= this.cellSize * this.speed;
+      }
+      if (
+        (event.key === 'ArrowDown' || (cursors && cursors.down && cursors.down.isDown)) &&
+        this.canMove(player.x, newY + this.cellSize)
+      ) {
+        newY += this.cellSize * this.speed;
+      }
+      if (
+        (event.key === 'ArrowLeft' || (cursors && cursors.left && cursors.left.isDown)) &&
+        this.canMove(newX - this.cellSize, player.y)
+      ) {
+        newX -= this.cellSize * this.speed;
+      }
+      if (
+        (event.key === 'ArrowRight' || (cursors && cursors.right && cursors.right.isDown)) &&
+        this.canMove(newX + this.cellSize, player.y)
+      ) {
+        newX += this.cellSize * this.speed;
+      }
 
-        if (
-          newX >= 40 &&
-          newX < this.gridSize * this.cellSize &&
-          newY >= 40 &&
-          newY < this.gridSize * this.cellSize
-        ) {
-          player.setPosition(newX, newY);
-          this.checkCollisions();
-        }
-      });
-    }
+      if (
+        newX >= 40 && newX < this.gridSize * this.cellSize &&
+        newY >= 40 && newY < this.gridSize * this.cellSize
+      ) {
+        player.setPosition(newX, newY);
+        this.checkCollisions();
+      }
+    });
 
-    // Spawn tokens
     this.time.addEvent({
       delay: 4000,
       callback: () => this.spawnToken(),
@@ -90,7 +100,6 @@ export default class Game extends Phaser.Scene {
       loop: true,
     });
 
-    // Spawn power-ups
     this.time.addEvent({
       delay: 10000,
       callback: () => this.spawnPowerUp(),
@@ -98,14 +107,13 @@ export default class Game extends Phaser.Scene {
       loop: true,
     });
 
-    // 90-second timer with health decay
     let timeLeft = 90;
     this.timerText = this.add.text(10, 50, `Time: ${timeLeft}`, { font: '16px Arial', color: '#ffffff' });
     this.time.addEvent({
       delay: 1000,
       callback: () => {
         timeLeft--;
-        this.health = Math.max(0, this.health - 0.5); // Gradual health loss
+        this.health = Math.max(0, this.health - 0.5);
         this.healthText.setText(`Health: ${Math.round(this.health)}%`);
         this.timerText.setText(`Time: ${timeLeft}`);
         if (timeLeft <= 0 || this.health <= 0) {
@@ -150,6 +158,11 @@ export default class Game extends Phaser.Scene {
         this.tokens.splice(index, 1);
         this.score += 1;
         this.scoreText.setText(`Score: ${this.score}`);
+        fetch('http://localhost:3000/api/score', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerId: this.playerId, score: this.score }),
+        });
       }
     });
 
@@ -160,6 +173,11 @@ export default class Game extends Phaser.Scene {
         this.powerUps.splice(index, 1);
         this.speed = 2;
         this.powerUpText.setText('Power-Up: Speed Boost (8s)');
+        fetch('http://localhost:3000/api/power-up', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerId: this.playerId, powerUpType: 'speedBoost' }),
+        });
         this.time.delayedCall(8000, () => {
           this.speed = 1;
           this.powerUpText.setText('Power-Ups: None');
