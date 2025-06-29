@@ -10,7 +10,7 @@ import { clusterApiUrl } from '@solana/web3.js'
 import { TOKEN_PROGRAM_ID, AccountLayout } from "@solana/spl-token";
 
 // Gorbagana testnet configuration
-const GORBAGANA_RPC = clusterApiUrl('devnet')
+const GORBAGANA_RPC = 'https://rpc.gorbagana.wtf/'
 const GORB_TOKEN_MINT = new PublicKey("5B2gczxMA1Gshf4ZHXofwFGd5pdRQ6HkbuiV4wV59XLP")
 
 interface WalletContextType {
@@ -43,6 +43,8 @@ function WalletContextProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   const connection = useMemo(() => new Connection(GORBAGANA_RPC, 'confirmed'), [])
+
+  const CONFIRM_TIMEOUT_MS = 60000; // 60 seconds
 
   // Real SPL token balance fetch
   const refreshBalance = async () => {
@@ -102,8 +104,18 @@ function WalletContextProvider({ children }: { children: React.ReactNode }) {
       )
       // Send transaction using wallet adapter
       const signature = await walletSendTransaction(transaction, connection)
-      // Optionally, wait for confirmation
-      await connection.confirmTransaction(signature, 'confirmed')
+      // Wait for confirmation with longer timeout
+      let confirmed = false;
+      try {
+        await Promise.race([
+          connection.confirmTransaction(signature, 'confirmed').then(() => { confirmed = true }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Transaction confirmation timed out.')), CONFIRM_TIMEOUT_MS))
+        ])
+      } catch (timeoutErr) {
+        if (!confirmed) {
+          setError('Transaction not confirmed in 60 seconds. Check status on the explorer.')
+        }
+      }
       await refreshBalance()
       return signature
     } catch (err) {

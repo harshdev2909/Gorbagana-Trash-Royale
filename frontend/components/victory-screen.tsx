@@ -115,7 +115,7 @@ export function VictoryScreen() {
         title: 'SOL Reward Sent',
         description: (
           <a
-            href={`https://explorer.solana.com/tx/${result.signature}?cluster=devnet`}
+            href={`https://explorer.solana.com/tx/${result.signature}?cluster=custom&customUrl=https://rpc.gorbagana.wtf/`}
             target="_blank"
             rel="noopener noreferrer"
             className="underline text-green-600"
@@ -273,7 +273,7 @@ export function VictoryScreen() {
                   <>
                     Reward sent! Tx: {" "}
                     <a
-                      href={`https://explorer.solana.com/tx/${realSignature}?cluster=devnet`}
+                      href={`https://explorer.solana.com/tx/${realSignature}?cluster=custom&customUrl=https://rpc.gorbagana.wtf/`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="underline text-green-600"

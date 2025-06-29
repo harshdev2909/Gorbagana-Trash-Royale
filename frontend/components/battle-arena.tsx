@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Heart, Shield, Coins, Map, MessageCircle, Users, Skull, Zap, Sword, Eye, Loader2 } from "lucide-react"
 import { useGameContext } from "@/contexts/GameContext"
 import { useWalletContext } from "@/contexts/WalletContext"
-import { gameSocket } from "@/lib/socket"
+import { gameWS } from "@/lib/game-ws"
 import { PublicKey } from '@solana/web3.js'
 import { useTransactionHistory } from '@/contexts/TransactionHistoryContext'
 import { useToast } from '@/hooks/use-toast'
 
-const TREASURY_ADDRESS = 'BdmpkTAbBQYRq5WUHTTCbAKCE6HbeoSzLZu1inQRrzU6'
+const TREASURY_ADDRESS = '6ncxVhwUppRj3x99WY3GNUyqYjALjo7aZUVogUGyKhEQ'
 const UPGRADE_COST_SOL = 0.001
 
 // Avatar mapping for arena
@@ -52,44 +52,68 @@ export function BattleArena() {
   const toastTimeout = useRef<NodeJS.Timeout | null>(null);
   const movementKeys = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d", "W", "A", "S", "D"]);
 
+  // Demo/mock players if needed
+  const demoPlayers = useMemo(() => {
+    const avatars = Object.keys(avatarImages)
+    return Array.from({ length: 4 }).map((_, i) => ({
+      id: `demo_${i}`,
+      name: `DemoPlayer${i + 1}`,
+      avatar: avatars[(i + 1) % avatars.length],
+      position: { x: Math.floor(Math.random() * 1000), y: Math.floor(Math.random() * 1000) },
+      health: Math.floor(Math.random() * 100) + 1,
+      shields: Math.floor(Math.random() * 50),
+      level: Math.floor(Math.random() * 5) + 1,
+      isAlive: true,
+    }))
+  }, [])
+
+  // Use demo players if the player list is empty or only contains the current user
+  const playersToShow = useMemo(() => {
+    let list = []
+    if (!currentMatch || !currentMatch.players || currentMatch.players.length <= 1) {
+      list = [currentPlayer, ...demoPlayers]
+    } else {
+      list = currentMatch.players
+    }
+    // Filter out null/undefined
+    return list.filter((p) => !!p)
+  }, [currentMatch, currentPlayer, demoPlayers])
+
   useEffect(() => {
-    if (!currentMatch) return
+    if (!currentMatch || !currentMatch.players || currentMatch.players.length <= 1) return; // Only real matches
+    const WS_URL = 'ws://localhost:3001';
+    gameWS.connect(WS_URL, () => {
+      // Optionally send join event
+      if (currentPlayer) gameWS.send("joinLobby", { playerId: currentPlayer.id, matchId: currentMatch.id });
+    });
 
-    // Connect to game socket
-    gameSocket.connect(currentPlayer?.id || 'player', currentMatch.id)
-
-    // Set up real-time event listeners
-    gameSocket.on('player-updated', (data: any) => {
+    const handlePlayerUpdated = (data: any) => {
       if (data.health !== undefined) {
         updatePlayerHealth(data.playerId, data.health)
       }
       if (data.position) {
         updatePlayerPosition(data.playerId, data.position)
       }
-    })
-
-    gameSocket.on('player-eliminated', (data: any) => {
-      eliminatePlayer(data.playerId, data.killerId)
-    })
-
-    gameSocket.on('arena-shrinking', (data: any) => {
-      updateArenaSize(data.newSize)
-      setShrinkTimer(data.timeRemaining)
-    })
-
-    gameSocket.on('chat-message', (data: any) => {
+    };
+    const handlePlayerEliminated = (data: any) => eliminatePlayer(data.playerId, data.killerId);
+    const handleArenaShrinking = (data: any) => { updateArenaSize(data.newSize); setShrinkTimer(data.timeRemaining); };
+    const handleChatMessage = (data: any) => {
       setChatMessages(prev => [...prev, {
         id: Date.now().toString(),
         player: data.playerId,
         message: data.message
       }])
-    })
+    };
+
+    gameWS.on('player-updated', handlePlayerUpdated)
+    gameWS.on('player-eliminated', handlePlayerEliminated)
+    gameWS.on('arena-shrinking', handleArenaShrinking)
+    gameWS.on('chat-message', handleChatMessage)
 
     // Arena shrinking timer
     const timer = setInterval(() => {
       setShrinkTimer((prev) => {
         if (prev <= 1) {
-          // DEMO: Always show victory screen
           setGameState('victory');
           return 0;
         }
@@ -99,9 +123,13 @@ export function BattleArena() {
 
     return () => {
       clearInterval(timer)
-      gameSocket.disconnect()
+      gameWS.off('player-updated', handlePlayerUpdated)
+      gameWS.off('player-eliminated', handlePlayerEliminated)
+      gameWS.off('arena-shrinking', handleArenaShrinking)
+      gameWS.off('chat-message', handleChatMessage)
+      gameWS.close()
     }
-  }, [currentMatch, currentPlayer])
+  }, [currentMatch, currentPlayer]);
 
   // Smooth movement effect
   useEffect(() => {
@@ -158,7 +186,7 @@ export function BattleArena() {
 
   const sendChatMessage = () => {
     if (newChatMessage.trim() && currentPlayer) {
-      gameSocket.sendChatMessage(currentPlayer.id, newChatMessage)
+      gameWS.send("chatMessage", { playerId: currentPlayer.id, message: newChatMessage })
       setNewChatMessage("")
     }
   }
@@ -185,7 +213,7 @@ export function BattleArena() {
         description: (
           <span>
             Transaction:&nbsp;
-            <a href={`https://explorer.solana.com/tx/${signature}?cluster=devnet`} target="_blank" rel="noopener noreferrer" className="underline text-green-600">
+            <a href={`https://explorer.solana.com/tx/${signature}?cluster=custom&customUrl=https://rpc.gorbagana.wtf/`} target="_blank" rel="noopener noreferrer" className="underline text-green-600">
               {signature.slice(0, 8)}...{signature.slice(-8)}
             </a>
           </span>
@@ -198,6 +226,29 @@ export function BattleArena() {
     }
   }
 
+  // Fallback shrink timer for demo mode
+  const demoTimerStarted = useRef(false);
+  useEffect(() => {
+    if (currentMatch && currentMatch.players && currentMatch.players.length > 1) {
+      demoTimerStarted.current = false;
+      return; // Only for demo/mock
+    }
+    if (!demoTimerStarted.current) {
+      setShrinkTimer(30);
+      demoTimerStarted.current = true;
+    }
+    const timer = setInterval(() => {
+      setShrinkTimer(prev => {
+        if (prev <= 1) {
+          setGameState('victory');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [currentMatch, setGameState]);
+
   if (!currentMatch || !currentPlayer) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -206,9 +257,14 @@ export function BattleArena() {
     )
   }
 
-  const alivePlayers = currentMatch.players.filter(p => p.isAlive)
+  const alivePlayers = playersToShow.filter(p => p.isAlive)
   const playerHealth = currentPlayer.health
   const playerShield = currentPlayer.shields
+
+  // Calculate dynamic shrinking for arena
+  const shrinkPercent = Math.max(0.2, shrinkTimer / 30); // 1 at start, 0.2 at end
+  const dangerInset = 4 + (1 - shrinkPercent) * 80; // from 4px to 84px
+  const pingInset = 8 + (1 - shrinkPercent) * 120;   // from 8px to 128px
 
   return (
     <div className="min-h-screen p-4 pt-20 relative z-10">
@@ -263,7 +319,7 @@ export function BattleArena() {
               </span>
             </div>
             <div className="space-y-2">
-              {currentMatch.players.map((player) => (
+              {playersToShow.map((player) => (
                 <div
                   key={player.id}
                   className={`flex items-center gap-3 p-2 rounded-lg transition-all truncate
@@ -293,53 +349,61 @@ export function BattleArena() {
             <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,0,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,0,0.1)_1px,transparent_1px)] bg-[size:20px_20px]" />
 
             {/* Danger Zone */}
-            <div className="absolute inset-4 border-4 border-red-500 rounded-full animate-pulse opacity-50" />
-            <div className="absolute inset-8 border-2 border-red-400 rounded-full animate-ping opacity-30" />
+            <div
+              className="absolute border-4 border-red-500 rounded-full animate-pulse opacity-50"
+              style={{ inset: `${dangerInset}px` }}
+            />
+            <div
+              className="absolute border-2 border-red-400 rounded-full animate-ping opacity-30"
+              style={{ inset: `${pingInset}px` }}
+            />
 
             {/* Player Positions */}
-            {currentMatch.players.map((player) => (
-              <div
-                key={player.id}
-                className={`absolute flex flex-col items-center justify-center z-10 pointer-events-none
-                  ${player.isAlive ? "animate-bounce-slow" : "opacity-60 grayscale"}
-                `}
-                style={{
-                  left: `${(player.position.x / 1000) * 100}%`,
-                  top: `${(player.position.y / 1000) * 100}%`,
-                  transform: "translate(-50%, -50%)"
-                }}
-              >
-                <img
-                  src={avatarImages[player.avatar] || "/placeholder-user.jpg"}
-                  alt={player.avatar}
-                  onError={e => (e.currentTarget.src = "/placeholder-user.jpg")}
-                  className={`w-12 h-12 rounded-full object-cover border-4 shadow-lg bg-gray-800
-                    ${player.id === currentPlayer.id ? "border-green-400 ring-2 ring-green-300" : player.isAlive ? "border-blue-400" : "border-red-400"}
+            {playersToShow.map((player) =>
+              player.position && typeof player.position.x === 'number' && typeof player.position.y === 'number' ? (
+                <div
+                  key={player.id}
+                  className={`absolute flex flex-col items-center justify-center z-10 pointer-events-none
+                    ${player.isAlive ? "animate-bounce-slow" : "opacity-60 grayscale"}
                   `}
-                  style={{ boxShadow: player.id === currentPlayer.id ? "0 0 16px #22c55e" : undefined }}
-                />
-                {/* Health Bar */}
-                <div className="w-12 h-2 bg-gray-700 rounded mt-1 relative overflow-hidden">
-                  <div
-                    className="h-2 rounded bg-green-400 transition-all"
-                    style={{ width: `${Math.max(0, Math.min(100, player.health))}%` }}
+                  style={{
+                    left: `${(player.position.x / 1000) * 100}%`,
+                    top: `${(player.position.y / 1000) * 100}%`,
+                    transform: "translate(-50%, -50%)"
+                  }}
+                >
+                  <img
+                    src={avatarImages[player.avatar] || "/placeholder-user.jpg"}
+                    alt={player.avatar}
+                    onError={e => (e.currentTarget.src = "/placeholder-user.jpg")}
+                    className={`w-12 h-12 rounded-full object-cover border-4 shadow-lg bg-gray-800
+                      ${player.id === currentPlayer.id ? "border-green-400 ring-2 ring-green-300" : player.isAlive ? "border-blue-400" : "border-red-400"}
+                    `}
+                    style={{ boxShadow: player.id === currentPlayer.id ? "0 0 16px #22c55e" : undefined }}
                   />
-                  <div className="absolute inset-0 flex items-center justify-center text-xs text-white font-bold">
-                    {player.health}
+                  {/* Health Bar */}
+                  <div className="w-12 h-2 bg-gray-700 rounded mt-1 relative overflow-hidden">
+                    <div
+                      className="h-2 rounded bg-green-400 transition-all"
+                      style={{ width: `${Math.max(0, Math.min(100, player.health))}%` }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center text-xs text-white font-bold">
+                      {player.health}
+                    </div>
+                  </div>
+                  {/* Shields and Info */}
+                  <div className="flex items-center gap-2 mt-1 text-xs font-semibold">
+                    <span className="text-blue-300">🛡️ {player.shields}</span>
+                    <span className="text-yellow-300">⚡ Lv.{player.level}</span>
+                  </div>
+                  <div className={`mt-1 text-xs font-bold text-center select-none
+                    ${player.id === currentPlayer.id ? "text-green-300" : player.isAlive ? "text-blue-200" : "text-red-400 line-through"}
+                  `}>
+                    {player.id === currentPlayer.id ? "YOU" : player.name}
                   </div>
                 </div>
-                {/* Shields and Info */}
-                <div className="flex items-center gap-2 mt-1 text-xs font-semibold">
-                  <span className="text-blue-300">🛡️ {player.shields}</span>
-                  <span className="text-yellow-300">⚡ Lv.{player.level}</span>
-                </div>
-                <div className={`mt-1 text-xs font-bold text-center select-none
-                  ${player.id === currentPlayer.id ? "text-green-300" : player.isAlive ? "text-blue-200" : "text-red-400 line-through"}
-                `}>
-                  {player.id === currentPlayer.id ? "YOU" : player.name}
-                </div>
-              </div>
-            ))}
+              ) : null
+            )}
 
             {/* Battle Effects */}
             <div className="absolute top-1/4 right-1/4 w-8 h-8 bg-orange-500 rounded-full animate-ping opacity-75" />
@@ -366,18 +430,20 @@ export function BattleArena() {
               MINI-MAP
             </h3>
             <div className="w-full h-24 bg-gray-900 rounded border border-blue-500/30 relative">
-              {currentMatch.players.map((player) => (
-                <div
-                  key={player.id}
-                  className={`absolute w-2 h-2 rounded-full transform -translate-x-1/2 -translate-y-1/2 ${
-                    player.id === currentPlayer.id ? "bg-green-500" : "bg-blue-500"
-                  }`}
-                  style={{ 
-                    left: `${(player.position.x / 1000) * 100}%`, 
-                    top: `${(player.position.y / 1000) * 100}%` 
-                  }}
-                />
-              ))}
+              {playersToShow.map((player) =>
+                player.position && typeof player.position.x === 'number' && typeof player.position.y === 'number' ? (
+                  <div
+                    key={player.id}
+                    className={`absolute w-2 h-2 rounded-full transform -translate-x-1/2 -translate-y-1/2 ${
+                      player.id === currentPlayer.id ? "bg-green-500" : "bg-blue-500"
+                    }`}
+                    style={{
+                      left: `${(player.position.x / 1000) * 100}%`,
+                      top: `${(player.position.y / 1000) * 100}%`
+                    }}
+                  />
+                ) : null
+              )}
             </div>
           </Card>
 

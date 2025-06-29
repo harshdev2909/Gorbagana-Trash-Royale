@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useWalletContext } from '../contexts/WalletContext'
 import { PublicKey } from '@solana/web3.js'
 
-const TREASURY_ADDRESS = 'BdmpkTAbBQYRq5WUHTTCbAKCE6HbeoSzLZu1inQRrzU6'
+const TREASURY_ADDRESS = '6ncxVhwUppRj3x99WY3GNUyqYjALjo7aZUVogUGyKhEQ'
 const AMOUNT_SOL = 0.001
 
 export default function SolDemo() {
@@ -51,7 +51,7 @@ export default function SolDemo() {
         <div style={{ marginTop: 16, color: 'green' }}>
           Entry fee sent! Tx:&nbsp;
           <a
-            href={`https://explorer.solana.com/tx/${status.split('Tx: ')[1]}?cluster=devnet`}
+            href={`https://explorer.solana.com/tx/${status.split('Tx: ')[1]}?cluster=custom&customUrl=https://rpc.gorbagana.wtf/`}
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: 'lightgreen', wordBreak: 'break-all', textDecoration: 'underline' } as React.CSSProperties}

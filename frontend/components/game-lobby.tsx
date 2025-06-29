@@ -14,8 +14,11 @@ import { useToast } from '@/hooks/use-toast'
 import RealTimeChat from './real-time-chat'
 import PrivateRoom from '@/components/private-room'
 
-const TREASURY_ADDRESS = 'BdmpkTAbBQYRq5WUHTTCbAKCE6HbeoSzLZu1inQRrzU6'
+const TREASURY_ADDRESS = '6ncxVhwUppRj3x99WY3GNUyqYjALjo7aZUVogUGyKhEQ'
 const ENTRY_FEE_SOL = 0.001
+
+// Use your backend for game WebSocket, not Solana RPC
+const BACKEND_WS_URL = 'ws://localhost:3001'; // Change to wss://your-backend-domain for production
 
 interface LeaderboardEntry {
   playerId: string;
@@ -36,13 +39,15 @@ export function GameLobby() {
     matchmakingProgress, 
     startMatchmaking, 
     cancelMatchmaking,
-    error: gameError 
+    error: gameError,
+    setGameState
   } = useGameContext()
   
   const { 
     connected, 
     publicKey, 
     gorbBalance, 
+    solBalance, 
     isLoading, 
     error: walletError,
     disconnect,
@@ -62,6 +67,9 @@ export function GameLobby() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
 
+  const SOL_TO_GORB_RATE = 2704.877024;
+  const gorbEquivalent = solBalance * SOL_TO_GORB_RATE;
+
   // Simulate real-time updates
   useEffect(() => {
     const interval = setInterval(() => {
@@ -71,7 +79,7 @@ export function GameLobby() {
   }, [])
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:3001');
+    const ws = new WebSocket(BACKEND_WS_URL);
     ws.onopen = () => {
       if (publicKey) ws.send(JSON.stringify({ event: 'joinLobby', playerId: publicKey.toString(), matchId }));
     };
@@ -92,7 +100,7 @@ export function GameLobby() {
   useEffect(() => {
     fetch('http://localhost:3001/leaderboard').then(r => r.json()).then(setLeaderboard);
     fetch('http://localhost:3001/profiles').then(r => r.json()).then(setProfiles);
-    const ws = new WebSocket('ws://localhost:3001');
+    const ws = new WebSocket(BACKEND_WS_URL);
     ws.onmessage = (event) => {
       try {
         const { event: evt, data } = JSON.parse(event.data);
@@ -128,7 +136,7 @@ export function GameLobby() {
         description: (
           <span>
             Transaction:&nbsp;
-            <a href={`https://explorer.solana.com/tx/${signature}?cluster=devnet`} target="_blank" rel="noopener noreferrer" className="underline text-green-600">
+            <a href={`https://explorer.solana.com/tx/${signature}?cluster=custom&customUrl=https://rpc.gorbagana.wtf/`} target="_blank" rel="noopener noreferrer" className="underline text-green-600">
               {signature.slice(0, 8)}...{signature.slice(-8)}
             </a>
           </span>
@@ -163,6 +171,8 @@ export function GameLobby() {
               <div className="flex items-center gap-2 bg-black/80 backdrop-blur-sm px-4 py-2 rounded-lg border border-green-500/50 shadow-lg">
                 <Wallet className="w-5 h-5" />
                 <span className="text-lg font-bold text-white">{gorbBalance.toLocaleString()} GORB</span>
+                <span className="text-blue-400 font-bold ml-2">{solBalance.toFixed(4)} SOL</span>
+                <span className="text-gold-400 font-bold ml-2">≈ {gorbEquivalent.toLocaleString(undefined, { maximumFractionDigits: 4 })} GORB</span>
               </div>
               <div className="text-sm text-gray-400">
                 {publicKey?.toString().slice(0, 8)}...{publicKey?.toString().slice(-8)}
@@ -290,7 +300,10 @@ export function GameLobby() {
                   key={mode.key}
                   variant={selectedGameMode === mode.key ? "default" : "outline"}
                   className={selectedGameMode === mode.key ? "bg-green-500 text-black" : "border-green-500/50 text-green-400"}
-                  onClick={() => setSelectedGameMode(mode.key as any)}
+                  onClick={() => {
+                    setSelectedGameMode(mode.key as any)
+                    if (mode.key === 'tournament') setGameState('tournament')
+                  }}
                 >
                   {mode.label}
                 </Button>
@@ -304,16 +317,19 @@ export function GameLobby() {
               </div>
             )}
 
-            <div className="bg-black/40 p-4 rounded-lg border border-gold-500/30">
-              <div className="flex items-center justify-center gap-2 text-gold-400 text-lg font-bold">
-                <Coins className="w-6 h-6" />
-                Entry Fee: {ENTRY_FEE_SOL} SOL
+            <div className="flex justify-center mt-6">
+              <div className="flex items-center gap-2 bg-yellow-400/90 border-2 border-yellow-500 shadow-lg px-8 py-4 rounded-xl">
+                <Coins className="w-6 h-6 text-yellow-700" />
+                <span className="text-2xl font-extrabold text-yellow-900 drop-shadow">Entry Fee: {ENTRY_FEE_SOL} SOL</span>
               </div>
             </div>
 
-            {txStatus && (
-              <div className="mt-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg">
-                <span className="text-green-400 text-sm">{txStatus}</span>
+            {isLoading && txStatus && (
+              <div className="flex justify-center mt-6">
+                <div className="flex items-center gap-3 bg-green-400/90 border-2 border-green-600 shadow-lg px-8 py-4 rounded-xl">
+                  <Loader2 className="w-5 h-5 text-green-900 animate-spin" />
+                  <span className="text-lg font-bold text-green-900 drop-shadow">{txStatus}</span>
+                </div>
               </div>
             )}
 
@@ -464,7 +480,7 @@ export function GameLobby() {
                       <td className="pr-4 text-gray-400">{new Date(tx.timestamp).toLocaleTimeString()}</td>
                       <td>
                         <a
-                          href={`https://explorer.solana.com/tx/${tx.hash}?cluster=devnet`}
+                          href={`https://explorer.solana.com/tx/${tx.hash}?cluster=custom&customUrl=https://rpc.gorbagana.wtf/`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-green-400 underline break-all"

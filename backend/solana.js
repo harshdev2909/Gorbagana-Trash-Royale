@@ -5,7 +5,8 @@ import fs from 'fs';
 
 dotenv.config();
 
-const connection = new Connection(process.env.RPC_URL, 'confirmed');
+// Use Gorbagana RPC directly
+const connection = new Connection('https://rpc.gorbagana.wtf/', 'confirmed');
 
 // Load your treasury keypair (NEVER expose this to frontend!)
 const secret = JSON.parse(fs.readFileSync('./treasury.json', 'utf8'));
@@ -50,4 +51,4 @@ router.post('/claim-sol-reward', async (req, res) => {
   }
 });
 
-module.exports = { router, sendSol };
+export { router };

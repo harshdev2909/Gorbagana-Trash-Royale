@@ -22,6 +22,9 @@ interface Profile {
   bio?: string;
 }
 
+// Use your backend for game WebSocket, not Solana RPC
+const BACKEND_WS_URL = 'ws://localhost:3001'; // Change to wss://your-backend-domain for production
+
 export default function LeaderboardHistory() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [matchHistory, setMatchHistory] = useState<MatchRecord[]>([]);
@@ -31,7 +34,7 @@ export default function LeaderboardHistory() {
     fetch('http://localhost:3001/leaderboard').then(r => r.json()).then(setLeaderboard);
     fetch('http://localhost:3001/match-history').then(r => r.json()).then(setMatchHistory);
     fetch('http://localhost:3001/profiles').then(r => r.json()).then(setProfiles);
-    const ws = new WebSocket('ws://localhost:3001');
+    const ws = new WebSocket(BACKEND_WS_URL);
     ws.onmessage = (event) => {
       try {
         const { event: evt, data } = JSON.parse(event.data);

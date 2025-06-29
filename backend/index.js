@@ -6,7 +6,7 @@ import { getLeaderboard, recordWin } from './leaderboard.js';
 import { WebSocketServer } from 'ws';
 import { db, connectDB } from './db.js';
 import crypto from 'crypto';
-import solanaRoutes from './solana.js';
+import { router as solanaRoutes, sendSol } from './solana.js';
 
 dotenv.config();
 

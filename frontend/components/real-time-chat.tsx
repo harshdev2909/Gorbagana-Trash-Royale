@@ -2,6 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useWalletContext } from '@/contexts/WalletContext';
 import { Button } from '@/components/ui/button';
 
+// Use your backend for game WebSocket, not Solana RPC
+const BACKEND_WS_URL = 'ws://localhost:3001'; // Change to wss://your-backend-domain for production
+
 export default function RealTimeChat() {
   const { publicKey } = useWalletContext();
   const [chatMessages, setChatMessages] = useState<{playerId: string, message: string, timestamp: number}[]>([]);
@@ -9,7 +12,7 @@ export default function RealTimeChat() {
   const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    ws.current = new WebSocket('ws://localhost:3001');
+    ws.current = new WebSocket(BACKEND_WS_URL);
     ws.current.onopen = () => {
       console.log('WebSocket connected for chat');
     };

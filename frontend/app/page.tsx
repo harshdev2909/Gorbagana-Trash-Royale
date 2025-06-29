@@ -66,7 +66,7 @@ export default function TrashRoyale() {
       <div className="relative z-20">
         <Navigation />
         {renderGameState()}
-        {/* <SolDemo /> */}
+        <SolDemo />
       </div>
     </div>
   )

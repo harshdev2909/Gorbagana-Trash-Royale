@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useWalletContext } from './WalletContext'
-import { gameSocket } from "@/lib/socket"
+import { gameWS } from "@/lib/game-ws"
 
 export type GameState = 'lobby' | 'matchmaking' | 'battle' | 'victory' | 'defeat' | 'spectator' | 'tournament'
 
@@ -184,12 +184,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Real-time player list sync for lobbies
   useEffect(() => {
+    const WS_URL = 'ws://localhost:3001';
+    gameWS.connect(WS_URL);
     function handleLobbyPlayers(players: any) {
       setCurrentMatch(prev => prev ? { ...prev, players } : prev)
     }
-    gameSocket.on('lobbyPlayers', handleLobbyPlayers)
+    gameWS.on('lobbyPlayers', handleLobbyPlayers)
     return () => {
-      gameSocket.off('lobbyPlayers', handleLobbyPlayers)
+      gameWS.off('lobbyPlayers', handleLobbyPlayers)
+      gameWS.close();
     }
   }, [])
 

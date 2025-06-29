@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { useWalletContext } from "@/contexts/WalletContext"
 import { PublicKey } from "@solana/web3.js"
 
-const TREASURY_ADDRESS = "BdmpkTAbBQYRq5WUHTTCbAKCE6HbeoSzLZu1inQRrzU6"
+const TREASURY_ADDRESS = '6ncxVhwUppRj3x99WY3GNUyqYjALjo7aZUVogUGyKhEQ'
 const PRIVATE_ROOM_FEE_SOL = 0.01
 
 export default function PrivateRoom() {
