@@ -12,7 +12,7 @@ dotenv.config();
 
 const app = express();
 app.use(cors({
-  origin: 'https://trash-royale.vercel.app',
+  origin: ['https://trash-royale.vercel.app', 'http://localhost:3000'],
   credentials: true,
 }));
 app.use(express.json());
@@ -195,6 +195,26 @@ app.post('/create-room', (req, res) => {
     winner: null,
     createdAt: Date.now(),
   };
+  // Auto-win after 30 seconds if still only one player and no winner
+  setTimeout(async () => {
+    const match = matches[matchId];
+    if (match && match.players.length === 1 && !match.winner) {
+      match.winner = match.players[0].id;
+      match.state = 'finished';
+      // Optionally record win and match history
+      await recordWin(match.players[0].id);
+      await recordMatch({
+        id: matchId,
+        winner: match.players[0].id,
+        players: match.players,
+        endedAt: Date.now(),
+        events: [],
+      });
+      broadcastToLobby(matchId, 'victory', { winnerId: match.players[0].id });
+      broadcast('leaderboard', await getLeaderboard());
+      broadcast('matchHistory', await getMatchHistory());
+    }
+  }, 30000);
   res.json({ matchId });
 });
 

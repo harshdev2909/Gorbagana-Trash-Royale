@@ -408,7 +408,26 @@ export function BattleArena() {
                     />
                     {/* Boost effect overlay */}
                     {player.id === currentPlayer.id && boosted && (
-                      <div className="absolute inset-0 rounded-full border-4 border-yellow-400 animate-ping pointer-events-none" style={{ zIndex: 2 }} />
+                      <>
+                        {/* Existing glow effect */}
+                        <div className="absolute inset-0 rounded-full border-4 border-yellow-400 animate-ping pointer-events-none" style={{ zIndex: 2 }} />
+                        {/* Burst/confetti effect */}
+                        <div className="absolute inset-0 pointer-events-none z-30">
+                          {[...Array(12)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="absolute w-2 h-2 rounded-full"
+                              style={{
+                                left: '50%',
+                                top: '50%',
+                                background: `hsl(${i * 30}, 90%, 60%)`,
+                                transform: `translate(-50%, -50%) rotate(${i * 30}deg) translateY(-32px)`,
+                                animation: 'burst 0.7s cubic-bezier(.4,2,.6,1) both'
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                   {/* Health Bar */}
