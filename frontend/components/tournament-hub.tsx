@@ -265,9 +265,9 @@ export function TournamentHub() {
           <div className="flex items-center justify-center gap-4 text-gold-400">
             <div className="flex items-center gap-2 bg-black/80 backdrop-blur-sm px-4 py-2 rounded-lg border border-gold-500/50 shadow-lg">
               <Coins className="w-5 h-5" />
-              <span className="text-lg font-bold text-white">{gorbBalance.toLocaleString()} GORB</span>
+              <span className="text-lg font-bold text-white">{gorbEquivalent.toLocaleString(undefined, { maximumFractionDigits: 4 })} GORB</span>
               <span className="text-blue-400 font-bold ml-2">{solBalance.toFixed(4)} SOL</span>
-              <span className="text-gold-400 font-bold ml-2">≈ {gorbEquivalent.toLocaleString(undefined, { maximumFractionDigits: 4 })} GORB</span>
+              {/* <span className="text-gold-400 font-bold ml-2">≈ {gorbEquivalent.toLocaleString(undefined, { maximumFractionDigits: 4 })} GORB</span> */}
             </div>
             <Button
               variant="outline"

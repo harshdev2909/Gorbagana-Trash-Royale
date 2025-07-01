@@ -51,6 +51,7 @@ export function BattleArena() {
   const arenaMax = 1000;
   const toastTimeout = useRef<NodeJS.Timeout | null>(null);
   const movementKeys = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d", "W", "A", "S", "D"]);
+  const [boosted, setBoosted] = useState(false); // For upgrade effect
 
   // Demo/mock players if needed
   const demoPlayers = useMemo(() => {
@@ -70,7 +71,12 @@ export function BattleArena() {
   // Use demo players if the player list is empty or only contains the current user
   const playersToShow = useMemo(() => {
     let list = []
-    if (!currentMatch || !currentMatch.players || currentMatch.players.length <= 1) {
+    // Detect private room: only one player in match
+    const isPrivateRoom = currentMatch && currentMatch.players && currentMatch.players.length === 1;
+    if (isPrivateRoom) {
+      // Only show the current player in private arena
+      list = [currentPlayer]
+    } else if (!currentMatch || !currentMatch.players || currentMatch.players.length <= 1) {
       list = [currentPlayer, ...demoPlayers]
     } else {
       list = currentMatch.players
@@ -226,6 +232,15 @@ export function BattleArena() {
     }
   }
 
+  // Add a handler for GORB-based upgrades
+  const handleBuyUpgradeWithGorb = async (upgradeId: string, cost: number) => {
+    if (gorbBalance < cost) return;
+    setBoosted(true);
+    setTimeout(() => setBoosted(false), 2000); // Show boost effect for 2s
+    await buyUpgrade(upgradeId, cost);
+    // Optionally, show a toast or sound here
+  }
+
   // Fallback shrink timer for demo mode
   const demoTimerStarted = useRef(false);
   useEffect(() => {
@@ -297,7 +312,7 @@ export function BattleArena() {
             </div>
           </div>
 
-          {/* GORB Balance */}
+          {/* GORB Balance - always up to date */}
           <div className="flex items-center gap-2 bg-black/90 backdrop-blur-sm px-4 py-2 rounded-lg border border-gold-500/50 shadow-lg">
             <Coins className="w-5 h-5 text-gold-400" />
             <span className="text-gold-400 font-bold text-lg">{gorbBalance.toLocaleString()} GORB</span>
@@ -372,15 +387,22 @@ export function BattleArena() {
                     transform: "translate(-50%, -50%)"
                   }}
                 >
-                  <img
-                    src={avatarImages[player.avatar] || "/placeholder-user.jpg"}
-                    alt={player.avatar}
-                    onError={e => (e.currentTarget.src = "/placeholder-user.jpg")}
-                    className={`w-12 h-12 rounded-full object-cover border-4 shadow-lg bg-gray-800
-                      ${player.id === currentPlayer.id ? "border-green-400 ring-2 ring-green-300" : player.isAlive ? "border-blue-400" : "border-red-400"}
-                    `}
-                    style={{ boxShadow: player.id === currentPlayer.id ? "0 0 16px #22c55e" : undefined }}
-                  />
+                  <div className={`relative`}>
+                    <img
+                      src={avatarImages[player.avatar] || "/placeholder-user.jpg"}
+                      alt={player.avatar}
+                      onError={e => (e.currentTarget.src = "/placeholder-user.jpg")}
+                      className={`w-12 h-12 rounded-full object-cover border-4 shadow-lg bg-gray-800
+                        ${player.id === currentPlayer.id ? "border-green-400 ring-2 ring-green-300" : player.isAlive ? "border-blue-400" : "border-red-400"}
+                        ${player.id === currentPlayer.id && boosted ? "ring-4 ring-yellow-400 animate-pulse" : ""}
+                      `}
+                      style={{ boxShadow: player.id === currentPlayer.id ? "0 0 16px #22c55e" : undefined }}
+                    />
+                    {/* Boost effect overlay */}
+                    {player.id === currentPlayer.id && boosted && (
+                      <div className="absolute inset-0 rounded-full border-4 border-yellow-400 animate-ping pointer-events-none" style={{ zIndex: 2 }} />
+                    )}
+                  </div>
                   {/* Health Bar */}
                   <div className="w-12 h-2 bg-gray-700 rounded mt-1 relative overflow-hidden">
                     <div
@@ -490,7 +512,7 @@ export function BattleArena() {
                 <Button
                   size="sm"
                   className="w-full bg-gold-500 text-black hover:bg-gold-600"
-                  onClick={() => handleBuyUpgrade(upgrade.id, upgrade.cost)}
+                  onClick={() => handleBuyUpgradeWithGorb(upgrade.id, upgrade.cost)}
                   disabled={isLoading || gorbBalance < upgrade.cost}
                 >
                   {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "BUY"}

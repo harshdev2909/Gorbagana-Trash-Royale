@@ -48,9 +48,9 @@ export function Navigation() {
             {connected && (
               <div className="flex items-center gap-2 bg-green-500/20 px-3 py-2 rounded-lg border border-green-500/50">
                 <Wallet className="w-4 h-4 text-green-400" />
-                <span className="text-green-400 font-bold">{gorbBalance.toLocaleString()} GORB</span>
+                <span className="text-green-400 font-bold">{gorbEquivalent.toLocaleString(undefined, { maximumFractionDigits: 4 })} GORB</span>
                 <span className="text-blue-400 font-bold ml-2">{solBalance.toFixed(4)} SOL</span>
-                <span className="text-gold-400 font-bold ml-2">≈ {gorbEquivalent.toLocaleString(undefined, { maximumFractionDigits: 4 })} GORB</span>
+                {/* <span className="text-gold-400 font-bold ml-2">≈ {gorbEquivalent.toLocaleString(undefined, { maximumFractionDigits: 4 })} GORB</span> */}
               </div>
             )}
             
