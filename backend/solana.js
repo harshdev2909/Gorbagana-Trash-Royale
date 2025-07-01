@@ -8,9 +8,10 @@ dotenv.config();
 // Use Gorbagana RPC directly
 const connection = new Connection('https://rpc.gorbagana.wtf/', 'confirmed');
 
-// Load your treasury keypair (NEVER expose this to frontend!)
-const secret = JSON.parse(fs.readFileSync('./treasury.json', 'utf8'));
-const treasury = Keypair.fromSecretKey(new Uint8Array(secret));
+// Load treasury keypair from env or file
+const treasury = process.env.TREASURY_KEYPAIR
+  ? JSON.parse(process.env.TREASURY_KEYPAIR)
+  : JSON.parse(fs.readFileSync('./treasury.json', 'utf8'));
 
 const router = express.Router();
 
