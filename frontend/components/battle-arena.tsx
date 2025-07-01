@@ -111,11 +111,17 @@ export function BattleArena() {
         message: data.message
       }])
     };
+    const handleVictory = (data: any) => {
+      if (data && data.winnerId && currentPlayer && data.winnerId === currentPlayer.id) {
+        setGameState('victory');
+      }
+    };
 
     gameWS.on('player-updated', handlePlayerUpdated)
     gameWS.on('player-eliminated', handlePlayerEliminated)
     gameWS.on('arena-shrinking', handleArenaShrinking)
     gameWS.on('chat-message', handleChatMessage)
+    gameWS.on('victory', handleVictory)
 
     // Arena shrinking timer
     const timer = setInterval(() => {
@@ -134,6 +140,7 @@ export function BattleArena() {
       gameWS.off('player-eliminated', handlePlayerEliminated)
       gameWS.off('arena-shrinking', handleArenaShrinking)
       gameWS.off('chat-message', handleChatMessage)
+      gameWS.off('victory', handleVictory)
       gameWS.close()
     }
   }, [currentMatch, currentPlayer]);
