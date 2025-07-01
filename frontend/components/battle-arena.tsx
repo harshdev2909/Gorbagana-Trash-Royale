@@ -52,6 +52,7 @@ export function BattleArena() {
   const toastTimeout = useRef<NodeJS.Timeout | null>(null);
   const movementKeys = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d", "W", "A", "S", "D"]);
   const [boosted, setBoosted] = useState(false); // For upgrade effect
+  const [buyingUpgradeId, setBuyingUpgradeId] = useState<string | null>(null); // Track which upgrade is being purchased
 
   // Demo/mock players if needed
   const demoPlayers = useMemo(() => {
@@ -235,11 +236,18 @@ export function BattleArena() {
   // Add a handler for GORB-based upgrades
   const handleBuyUpgradeWithGorb = async (upgradeId: string, cost: number) => {
     if (gorbBalance < cost) return;
+    setBuyingUpgradeId(upgradeId);
     setBoosted(true);
     setTimeout(() => setBoosted(false), 2000); // Show boost effect for 2s
     await buyUpgrade(upgradeId, cost);
+    setBuyingUpgradeId(null);
     // Optionally, show a toast or sound here
   }
+
+  // Debug log for GORB balance and loading
+  useEffect(() => {
+    console.log('GORB balance:', gorbBalance, 'isLoading:', isLoading);
+  }, [gorbBalance, isLoading]);
 
   // Fallback shrink timer for demo mode
   const demoTimerStarted = useRef(false);
@@ -513,9 +521,9 @@ export function BattleArena() {
                   size="sm"
                   className="w-full bg-gold-500 text-black hover:bg-gold-600"
                   onClick={() => handleBuyUpgradeWithGorb(upgrade.id, upgrade.cost)}
-                  disabled={isLoading || gorbBalance < upgrade.cost}
+                  disabled={buyingUpgradeId !== null && buyingUpgradeId !== upgrade.id || gorbBalance < upgrade.cost}
                 >
-                  {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "BUY"}
+                  {buyingUpgradeId === upgrade.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "BUY"}
                 </Button>
               </div>
             ))}

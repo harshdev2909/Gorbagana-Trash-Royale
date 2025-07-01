@@ -140,7 +140,7 @@ const avatarOptions = [
 ];
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
-  const { connected, publicKey, gorbBalance, sendTransaction } = useWalletContext()
+  const { connected, publicKey, gorbBalance, sendTransaction, refreshBalance } = useWalletContext()
   
   // Game State
   const [gameState, setGameState] = useState<GameState>('lobby')
@@ -273,13 +273,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const buyUpgrade = useCallback(async (upgradeId: string, cost: number) => {
     if (!currentMatch || !currentPlayer) return
 
+    if (gorbBalance < cost) {
+      setError('Insufficient GORB balance')
+      return
+    }
+
     try {
       setIsLoading(true)
       setError(null)
-      
       // Simulate transaction
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
       // Apply upgrade effect
       const updatedPlayer = { ...currentPlayer }
       switch (upgradeId) {
@@ -296,14 +299,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           // Damage boost would be applied during combat
           break
       }
-      
       setCurrentPlayer(updatedPlayer)
+      // Refresh GORB balance after upgrade
+      await refreshBalance()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to buy upgrade')
     } finally {
       setIsLoading(false)
     }
-  }, [currentMatch, currentPlayer])
+  }, [currentMatch, currentPlayer, gorbBalance, refreshBalance])
 
   const joinTournament = useCallback(async (tournamentId: string, entryFee: number) => {
     if (!connected || !publicKey) {

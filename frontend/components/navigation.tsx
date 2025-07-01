@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { useGameContext } from "@/contexts/GameContext"
 import { useWalletContext } from "@/contexts/WalletContext"
-import { Home, Users, Trophy, Eye, Settings, Wallet } from "lucide-react"
+import { Home, Users, Trophy, Eye, Settings, Wallet, Book } from "lucide-react"
 
 export function Navigation() {
   const { gameState, setGameState } = useGameContext()
@@ -15,6 +15,7 @@ export function Navigation() {
     { id: 'lobby', label: 'LOBBY', icon: Home },
     { id: 'tournament', label: 'TOURNAMENT', icon: Trophy },
     { id: 'spectator', label: 'SPECTATE', icon: Eye },
+    { id: 'how-to-play', label: 'HOW TO PLAY', icon: Book, href: '/how-to-play' },
   ]
 
   return (
@@ -28,16 +29,26 @@ export function Navigation() {
               return (
                 <Button
                   key={item.id}
+                  asChild={!!item.href}
                   variant={gameState === item.id ? "default" : "ghost"}
                   className={`${
                     gameState === item.id 
                       ? "bg-green-500 text-black" 
                       : "text-green-400 hover:bg-green-500/20"
                   } font-bold`}
-                  onClick={() => setGameState(item.id as any)}
+                  onClick={() => !item.href && setGameState(item.id as any)}
                 >
-                  <Icon className="w-4 h-4 mr-2" />
-                  {item.label}
+                  {item.href ? (
+                    <a href={item.href} className="flex items-center">
+                      <Icon className="w-4 h-4 mr-2" />
+                      {item.label}
+                    </a>
+                  ) : (
+                    <>
+                      <Icon className="w-4 h-4 mr-2" />
+                      {item.label}
+                    </>
+                  )}
                 </Button>
               )
             })}
