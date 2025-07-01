@@ -1,0 +1,84 @@
+============================
+TRASH ROYALE - GAME OVERVIEW
+============================
+
+Trash Royale is a real-time, multiplayer battle royale game built on the Solana blockchain (Gorbagana testnet/devnet). Compete in dynamic arenas, use SOL or GORB tokens for entry and upgrades, and climb the leaderboard. The game features public/private lobbies, tournaments, real-time chat, and persistent leaderboard and match history.
+
+----------------------------
+GAME FEATURES
+----------------------------
+- Real-time multiplayer battle arena
+- Public, private, and tournament lobbies
+- SOL and GORB (SPL token) payments for entry, upgrades, and rewards
+- Upgrades: shields, health, speed, damage
+- Live leaderboard, match history, and user profiles
+- Real-time chat and kill feed
+- Arena shrinking mechanic
+- WebSocket-powered live events
+- Spectator mode and betting
+- Animated victory/defeat screens
+- Secure backend treasury wallet for payouts
+
+----------------------------
+GORBAGANA/SOLANA INTEGRATION
+----------------------------
+- Connect with Phantom or compatible Solana wallets
+- Entry fees and upgrades use SOL or GORB tokens
+- Winners receive payouts from the backend treasury wallet
+- Backend uses Solana web3.js and SPL Token libraries
+- Backend treasury keypair is securely provided via environment variable (TREASURY_KEYPAIR)
+
+----------------------------
+HOW TO PLAY
+----------------------------
+1. Connect your Solana wallet (Phantom or compatible)
+2. Choose a lobby: public, private, or tournament
+3. Pay the entry fee (SOL or GORB)
+4. Move with WASD/arrow keys, survive as the arena shrinks
+5. Buy upgrades to boost your chances
+6. Chat with other players and watch the kill feed
+7. The last player standing wins rewards!
+
+----------------------------
+SETUP & DEPLOYMENT INSTRUCTIONS
+----------------------------
+
+PREREQUISITES:
+- Node.js 18+
+- Yarn or npm
+- Solana CLI (for keypair generation)
+
+1. Clone the repository:
+   git clone https://github.com/harshdev2909/Gorbagana-Trash-Royale.git
+   cd Gorbagana-Trash-Royale
+
+2. Backend Setup:
+   cd backend
+   npm install
+   # Generate a Solana keypair for the treasury wallet:
+   solana-keygen new --outfile treasury.json
+   # In production, set the TREASURY_KEYPAIR environment variable to the contents of treasury.json
+   npm start
+   # Backend runs on http://localhost:3001 or your deployed URL
+
+3. Frontend Setup:
+   cd ../frontend
+   npm install
+   npm run dev
+   # Frontend runs on http://localhost:3000 or your deployed URL
+
+4. Environment Variables:
+   - Backend: TREASURY_KEYPAIR (JSON array of Solana treasury wallet)
+   - Frontend: (Optional) NEXT_PUBLIC_BACKEND_URL
+
+5. Deployment:
+   - Deploy backend to Render, Heroku, or similar (set env vars securely)
+   - Deploy frontend to Vercel, Netlify, or similar
+   - Set CORS in backend to allow your frontend URL
+
+----------------------------
+CONTACT & LINKS
+----------------------------
+- Project Website: https://trash-royale.vercel.app/
+- Backend API: https://trash-royale.onrender.com/
+- Author: https://github.com/harshdev2909 
