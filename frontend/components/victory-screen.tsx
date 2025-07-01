@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast'
 import CountUp from 'react-countup'
 
 async function claimSolReward({ winnerAddress, amount, matchId, winnerId }: { winnerAddress: string, amount: number, matchId?: string, winnerId?: string }) {
-  const res = await fetch('http://localhost:3001/claim-sol-reward', {
+  const res = await fetch('https://trash-royale.onrender.com/claim-sol-reward', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ winnerAddress, amount, matchId, winnerId }),

@@ -3,7 +3,7 @@ import { useWalletContext } from '@/contexts/WalletContext';
 import { Button } from '@/components/ui/button';
 
 // Use your backend for game WebSocket, not Solana RPC
-const BACKEND_WS_URL = 'ws://localhost:3001'; // Change to wss://your-backend-domain for production
+const BACKEND_WS_URL = 'wss://trash-royale.onrender.com'; // Change to wss://your-backend-domain for production
 
 export default function RealTimeChat() {
   const { publicKey } = useWalletContext();

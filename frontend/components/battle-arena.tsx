@@ -88,7 +88,7 @@ export function BattleArena() {
 
   useEffect(() => {
     if (!currentMatch || !currentMatch.players || currentMatch.players.length <= 1) return; // Only real matches
-    const WS_URL = 'ws://localhost:3001';
+    const WS_URL = 'wss://trash-royale.onrender.com';
     gameWS.connect(WS_URL, () => {
       // Optionally send join event
       if (currentPlayer) gameWS.send("joinLobby", { playerId: currentPlayer.id, matchId: currentMatch.id });

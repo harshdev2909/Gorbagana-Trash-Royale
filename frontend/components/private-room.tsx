@@ -50,7 +50,7 @@ export default function PrivateRoom() {
         name: currentPlayer.name,
         avatar: currentPlayer.avatar,
       }
-      const res = await fetch("http://localhost:3001/create-room", {
+      const res = await fetch("https://trash-royale.onrender.com/create-room", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ player }),
@@ -91,7 +91,7 @@ export default function PrivateRoom() {
       name: currentPlayer.name,
       avatar: currentPlayer.avatar,
     }
-    const res = await fetch("http://localhost:3001/join-room", {
+    const res = await fetch("https://trash-royale.onrender.com/join-room", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ matchId: joinCode, player }),

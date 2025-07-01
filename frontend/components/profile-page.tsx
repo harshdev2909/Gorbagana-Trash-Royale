@@ -12,7 +12,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (publicKey) {
-      fetch(`http://localhost:3001/profile/${publicKey.toString()}`)
+      fetch(`https://trash-royale.onrender.com/profile/${publicKey.toString()}`)
         .then(r => r.json())
         .then(data => {
           if (data) {
@@ -31,7 +31,7 @@ export default function ProfilePage() {
       return;
     }
     setStatus('Saving...');
-    const res = await fetch('http://localhost:3001/profile', {
+    const res = await fetch('https://trash-royale.onrender.com/profile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

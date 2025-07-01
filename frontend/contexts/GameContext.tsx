@@ -184,7 +184,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Real-time player list sync for lobbies
   useEffect(() => {
-    const WS_URL = 'ws://localhost:3001';
+    const WS_URL = 'wss://trash-royale.onrender.com';
     gameWS.connect(WS_URL);
     function handleLobbyPlayers(players: any) {
       setCurrentMatch(prev => prev ? { ...prev, players } : prev)

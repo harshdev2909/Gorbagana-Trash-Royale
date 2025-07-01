@@ -18,7 +18,7 @@ const TREASURY_ADDRESS = '6ncxVhwUppRj3x99WY3GNUyqYjALjo7aZUVogUGyKhEQ'
 const ENTRY_FEE_SOL = 0.001
 
 // Use your backend for game WebSocket, not Solana RPC
-const BACKEND_WS_URL = 'ws://localhost:3001'; // Change to wss://your-backend-domain for production
+const BACKEND_WS_URL = 'wss://trash-royale.onrender.com';
 
 interface LeaderboardEntry {
   playerId: string;
@@ -98,8 +98,8 @@ export function GameLobby() {
   }, [publicKey, matchId]);
 
   useEffect(() => {
-    fetch('http://localhost:3001/leaderboard').then(r => r.json()).then(setLeaderboard);
-    fetch('http://localhost:3001/profiles').then(r => r.json()).then(setProfiles);
+    fetch('https://trash-royale.onrender.com/leaderboard').then(r => r.json()).then(setLeaderboard);
+    fetch('https://trash-royale.onrender.com/profiles').then(r => r.json()).then(setProfiles);
     const ws = new WebSocket(BACKEND_WS_URL);
     ws.onmessage = (event) => {
       try {
