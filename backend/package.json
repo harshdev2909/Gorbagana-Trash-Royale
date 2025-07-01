@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "build": "npm install"
+    "build": "echo 'No build step needed for plain JS. If using Babel, add your build command here.'"
   },
   "keywords": [],
   "author": "",
