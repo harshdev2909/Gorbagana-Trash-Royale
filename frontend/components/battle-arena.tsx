@@ -46,7 +46,7 @@ export function BattleArena() {
   const [chatMessages, setChatMessages] = useState<Array<{id: string, player: string, message: string}>>([])
   const [newChatMessage, setNewChatMessage] = useState("")
   const [upgradeTxStatus, setUpgradeTxStatus] = useState<string | null>(null)
-  const moveStep = 16; // faster movement
+  const moveStep = 40; // much faster movement
   const arenaMin = 0;
   const arenaMax = 1000;
   const toastTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -87,7 +87,10 @@ export function BattleArena() {
   }, [currentMatch, currentPlayer, demoPlayers])
 
   useEffect(() => {
-    if (!currentMatch || !currentMatch.players || currentMatch.players.length <= 1) return; // Only real matches
+    if (!currentMatch || !currentPlayer) return;
+    // Only run multiplayer WebSocket logic for non-single-player matches
+    if (currentMatch.id.startsWith('single_')) return;
+    if (!currentMatch.players || currentMatch.players.length <= 1) return; // Only real matches
     const WS_URL = 'wss://trash-royale.onrender.com';
     gameWS.connect(WS_URL, () => {
       // Optionally send join event
@@ -195,7 +198,16 @@ export function BattleArena() {
   }, [upgradeTxStatus]);
 
   const handleBuyUpgrade = async (upgradeId: string, cost: number) => {
-    await buyUpgrade(upgradeId, cost)
+    await buyUpgrade(upgradeId, cost);
+    // Cap health and shields at 100 after upgrade
+    if (currentPlayer) {
+      if (upgradeId === 'health' && currentPlayer.health > 100) {
+        updatePlayerHealth(currentPlayer.id, 100);
+      }
+      if (upgradeId === 'shield' && currentPlayer.shields > 100) {
+        // You may need a similar updatePlayerShields if available
+      }
+    }
   }
 
   const sendChatMessage = () => {
@@ -256,28 +268,140 @@ export function BattleArena() {
     console.log('GORB balance:', gorbBalance, 'isLoading:', isLoading);
   }, [gorbBalance, isLoading]);
 
-  // Fallback shrink timer for demo mode
-  const demoTimerStarted = useRef(false);
+  // --- Timer Logic (never stuck, highest health wins at end) ---
+  const shrinkTimerInitialized = useRef<string | null>(null);
+  const timerFinished = useRef<string | null>(null);
   useEffect(() => {
-    if (currentMatch && currentMatch.players && currentMatch.players.length > 1) {
-      demoTimerStarted.current = false;
-      return; // Only for demo/mock
-    }
-    if (!demoTimerStarted.current) {
+    if (!currentMatch) return;
+    // Always reset timer and finished flag on match change
+    if (shrinkTimerInitialized.current !== currentMatch.id) {
+      shrinkTimerInitialized.current = currentMatch.id;
       setShrinkTimer(30);
-      demoTimerStarted.current = true;
+      timerFinished.current = null;
     }
+    // Always run the timer for the current match
     const timer = setInterval(() => {
       setShrinkTimer(prev => {
-        if (prev <= 1) {
-          setGameState('victory');
+        if (prev <= 1 && timerFinished.current !== currentMatch.id) {
+          timerFinished.current = currentMatch.id;
+          // At timer end, highest health wins (tie = all win)
+          if (!currentMatch || !currentPlayer) return 0;
+          const alive = currentMatch.players.filter(p => p.isAlive && p.health > 0);
+          if (alive.length === 0) {
+            setGameState('defeat');
+            return 0;
+          }
+          const maxHealth = Math.max(...alive.map(p => p.health));
+          const winners = alive.filter(p => p.health === maxHealth);
+          if (winners.find(p => p.id === currentPlayer.id && currentPlayer.health > 0)) {
+            setGameState('victory');
+          } else {
+            setGameState('defeat');
+          }
           return 0;
         }
+        if (prev <= 1) return 0;
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [currentMatch, setGameState]);
+  }, [currentMatch, setGameState, currentPlayer]);
+
+  // --- Danger zone logic: reduce health by fixed amount if outside ---
+  useEffect(() => {
+    if (!currentMatch) return;
+    const shrinkPercent = Math.max(0.2, (typeof shrinkTimer === 'number' ? shrinkTimer : 30) / 30);
+    const safeRadius = (currentMatch.arenaSize / 2) * shrinkPercent;
+    const center = { x: 500, y: 500 };
+    const checkDangerZone = () => {
+      currentMatch.players.forEach(player => {
+        if (!player.isAlive || player.health <= 0) return;
+        const dx = player.position.x - center.x;
+        const dy = player.position.y - center.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > safeRadius) {
+          // Reduce health by a fixed amount (no fluctuation)
+          updatePlayerHealth(player.id, Math.max(0, player.health - 8));
+        }
+      });
+    };
+    const interval = setInterval(checkDangerZone, 500);
+    return () => clearInterval(interval);
+  }, [currentMatch, shrinkTimer, updatePlayerHealth]);
+
+  // --- Dynamic win/loss during match (not just at timer end) ---
+  useEffect(() => {
+    if (!currentMatch || !currentPlayer) return;
+    const alive = currentMatch.players.filter(p => p.isAlive);
+    if (alive.length === 1 && alive[0].id === currentPlayer.id) {
+      setGameState('victory');
+    } else if (!alive.find(p => p.id === currentPlayer.id)) {
+      setGameState('defeat');
+    }
+  }, [currentMatch, currentPlayer, setGameState]);
+
+  // Dynamic victory for single player mode
+  useEffect(() => {
+    if (!currentMatch || !currentMatch.id.startsWith('single_')) return;
+    if (!currentPlayer) return;
+    const alive = currentMatch.players.filter(p => p.isAlive);
+    if (alive.length === 1 && alive[0].id === currentPlayer.id) {
+      setGameState('victory');
+    }
+  }, [currentMatch, currentPlayer, setGameState]);
+
+  // --- Cap all health and shields at 100 ---
+  useEffect(() => {
+    if (!currentMatch || !currentPlayer) return;
+    // Cap all players' health and shields at 100
+    const cappedPlayers = currentMatch.players.map(p => ({
+      ...p,
+      health: Math.min(100, p.health),
+      shields: Math.min(100, p.shields),
+    }));
+    if (JSON.stringify(cappedPlayers) !== JSON.stringify(currentMatch.players)) {
+      updatePlayerPosition(currentPlayer.id, currentPlayer.position); // trigger update
+      // Only update if something changed
+      setTimeout(() => {
+        cappedPlayers.forEach(p => {
+          if (p.health !== currentMatch.players.find(x => x.id === p.id)?.health) {
+            updatePlayerHealth(p.id, p.health);
+          }
+        });
+      }, 0);
+    }
+  }, [currentMatch, currentPlayer, updatePlayerHealth, updatePlayerPosition]);
+
+  // --- Prevent movement if health is 0 ---
+  // For user
+  useEffect(() => {
+    if (!currentPlayer || currentPlayer.health > 0) return;
+    const block = (e: KeyboardEvent) => e.preventDefault();
+    window.addEventListener('keydown', block, { capture: true });
+    return () => window.removeEventListener('keydown', block, { capture: true });
+  }, [currentPlayer]);
+  // For bots: skip movement if health is 0
+  useEffect(() => {
+    if (!currentMatch || !currentPlayer) return;
+    const botMoveInterval = setInterval(() => {
+      const bots = currentMatch.players.filter(p => p.id !== currentPlayer.id && p.isAlive && p.health > 0);
+      bots.forEach(bot => {
+        const dx = Math.floor(Math.random() * 81) - 40;
+        const dy = Math.floor(Math.random() * 81) - 40;
+        const newX = Math.max(0, Math.min(1000, bot.position.x + dx));
+        const newY = Math.max(0, Math.min(1000, bot.position.y + dy));
+        updatePlayerPosition(bot.id, { x: newX, y: newY });
+        if (Math.random() < 0.5) {
+          const target = Math.random() < 0.6 ? currentPlayer : bots[Math.floor(Math.random() * bots.length)];
+          if (target && target.isAlive && target.id !== bot.id && target.health > 0) {
+            const damage = Math.floor(Math.random() * 25) + 10;
+            updatePlayerHealth(target.id, Math.max(0, target.health - damage));
+          }
+        }
+      });
+    }, 400);
+    return () => clearInterval(botMoveInterval);
+  }, [currentMatch, currentPlayer, updatePlayerPosition, updatePlayerHealth]);
 
   if (!currentMatch || !currentPlayer) {
     return (
@@ -380,12 +504,12 @@ export function BattleArena() {
 
             {/* Danger Zone */}
             <div
-              className="absolute border-4 border-red-500 rounded-full animate-pulse opacity-50"
-              style={{ inset: `${dangerInset}px` }}
+              className="absolute border-8 border-red-600 rounded-full animate-pulse opacity-80 shadow-2xl shadow-red-700"
+              style={{ inset: `${dangerInset}px`, boxShadow: '0 0 60px 20px #dc2626, 0 0 120px 40px #f87171' }}
             />
             <div
-              className="absolute border-2 border-red-400 rounded-full animate-ping opacity-30"
-              style={{ inset: `${pingInset}px` }}
+              className="absolute border-4 border-yellow-400 rounded-full animate-ping opacity-60 shadow-lg shadow-yellow-500"
+              style={{ inset: `${pingInset}px`, boxShadow: '0 0 40px 10px #facc15' }}
             />
 
             {/* Player Positions */}

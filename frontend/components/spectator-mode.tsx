@@ -94,6 +94,14 @@ export function SpectatorMode() {
 
   const alivePlayers = currentMatch.players.filter(p => p.isAlive)
 
+  // Add avatarImages mapping (same as battle-arena)
+  const avatarImages: Record<string, string> = {
+    "Garbage Bot": "https://static.vecteezy.com/system/resources/previews/042/899/708/non_2x/chibi-character-man-woman-for-your-game-character-avatar-or-your-cover-book-free-png.png",
+    "Junk Warrior": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQnCKCtQ9BSDw_UFSa_TatlABjhhZB4byNmDw&s",
+    "Scrap Knight": "https://cdn.imgbin.com/0/20/4/imgbin-guild-wars-2-guild-wars-eye-of-the-north-video-game-avatar-thorn-aYFEmf9EXgvwNyK15uju9LSBB.jpg",
+    "Trash Titan": "https://img.favpng.com/0/16/21/balthazar-guild-wars-nightfall-guild-wars-2-art-character-png-favpng-WZtLFt4RLLxJLDwHsXnak31zE.jpg"
+  };
+
   return (
     <div className="min-h-screen p-4 pt-20 relative z-10">
       {/* Top HUD */}
@@ -139,6 +147,12 @@ export function SpectatorMode() {
                   }`}
                   onClick={() => setSelectedPlayer(player.id)}
                 >
+                  <img
+                    src={avatarImages[player.avatar] || "/placeholder-user.jpg"}
+                    alt={player.avatar}
+                    onError={e => (e.currentTarget.src = "/placeholder-user.jpg")}
+                    className="w-10 h-10 rounded-full object-cover bg-gray-800 border-2 border-purple-400"
+                  />
                   <div className={`w-3 h-3 rounded-full ${player.isAlive ? "bg-green-500" : "bg-red-500"}`} />
                   <span className={`text-sm ${player.isAlive ? "text-white" : "text-gray-500 line-through"}`}>
                     {player.name}
@@ -168,15 +182,21 @@ export function SpectatorMode() {
             {currentMatch.players.map((player) => (
               <div
                 key={player.id}
-                className={`absolute w-4 h-4 rounded-full transform -translate-x-1/2 -translate-y-1/2 ${
-                  player.isAlive ? "bg-blue-500" : "bg-red-500"
-                } ${selectedPlayer === player.id ? "ring-2 ring-purple-400 animate-pulse" : ""}`}
+                className={`absolute flex flex-col items-center w-8 h-8 transform -translate-x-1/2 -translate-y-1/2 ${
+                  player.isAlive ? "" : "opacity-50 grayscale"
+                }`}
                 style={{ 
                   left: `${(player.position.x / 1000) * 100}%`, 
                   top: `${(player.position.y / 1000) * 100}%` 
                 }}
               >
-                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-blue-400">
+                <img
+                  src={avatarImages[player.avatar] || "/placeholder-user.jpg"}
+                  alt={player.avatar}
+                  onError={e => (e.currentTarget.src = "/placeholder-user.jpg")}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-purple-400 bg-gray-800"
+                />
+                <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 text-xs font-bold text-blue-400">
                   {player.name}
                 </div>
               </div>

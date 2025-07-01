@@ -40,7 +40,8 @@ export function GameLobby() {
     startMatchmaking, 
     cancelMatchmaking,
     error: gameError,
-    setGameState
+    setGameState,
+    startSinglePlayerMatch
   } = useGameContext()
   
   const { 
@@ -57,7 +58,7 @@ export function GameLobby() {
   const { addTransaction, transactions } = useTransactionHistory()
   const { toast } = useToast()
 
-  const [selectedGameMode, setSelectedGameMode] = useState<'quick' | 'tournament' | 'private'>('quick')
+  const [selectedGameMode, setSelectedGameMode] = useState<'quick' | 'tournament' | 'private' | 'single'>('quick')
   const [selectedAvatar, setSelectedAvatar] = useState('Garbage Bot')
   const [error, setError] = useState<string | null>(null)
   const [playerCount, setPlayerCount] = useState(2)
@@ -142,7 +143,13 @@ export function GameLobby() {
           </span>
         ),
       })
-      startMatchmaking()
+      // Add delay of 2-4 seconds before starting match
+      const delay = 2000 + Math.random() * 2000;
+      setTxStatus('Match starting...');
+      setTimeout(() => {
+        startMatchmaking();
+        setTxStatus(null);
+      }, delay);
     } catch (e: any) {
       setError(e.message || 'Failed to pay entry fee')
       setTxStatus(null)
@@ -150,11 +157,50 @@ export function GameLobby() {
     }
   }
 
+  const handleSinglePlayerMatch = async () => {
+    setError(null)
+    setTxStatus(null)
+    try {
+      setTxStatus('Processing entry fee payment...')
+      // Deduct entry fee in SOL for single player
+      const signature = await sendTransaction(new PublicKey(TREASURY_ADDRESS), ENTRY_FEE_SOL)
+      setTxStatus(`Entry fee paid! Tx: ${signature}`)
+      addTransaction({
+        type: 'entry',
+        amount: ENTRY_FEE_SOL,
+        hash: signature,
+        timestamp: Date.now(),
+      })
+      toast({
+        title: 'Entry Fee Paid',
+        description: (
+          <span>
+            Transaction:&nbsp;
+            <a href={`https://explorer.solana.com/tx/${signature}?cluster=custom&customUrl=https://rpc.gorbagana.wtf/`} target="_blank" rel="noopener noreferrer" className="underline text-green-600">
+              {signature.slice(0, 8)}...{signature.slice(-8)}
+            </a>
+          </span>
+        ),
+      })
+      // Add delay of 2-4 seconds before starting match
+      const delay = 2000 + Math.random() * 2000;
+      setTxStatus('Match starting...');
+      setTimeout(() => {
+        startSinglePlayerMatch();
+        setTxStatus(null);
+      }, delay);
+    } catch (e: any) {
+      setError(e.message || 'Failed to start single player match')
+      setTxStatus(null)
+    }
+  }
+
   const getEntryFee = () => {
     switch (selectedGameMode) {
       case 'tournament': return 50
       case 'private': return 25
-      default: return 10
+      case 'single': return ENTRY_FEE_SOL // Single Player fee
+      default: return ENTRY_FEE_SOL
     }
   }
 
@@ -267,7 +313,14 @@ export function GameLobby() {
                 <Button
                   size="lg"
                   className="text-2xl px-12 py-6 bg-gradient-to-r from-green-500 to-purple-500 hover:from-green-600 hover:to-purple-600 text-black font-black shadow-lg shadow-green-500/25 animate-pulse"
-                  onClick={handleFindMatch}
+                  onClick={() => {
+                    console.log('Selected mode:', selectedGameMode);
+                    if (selectedGameMode === 'single') {
+                      handleSinglePlayerMatch();
+                    } else {
+                      handleFindMatch();
+                    }
+                  }}
                   disabled={!connected || isLoading}
                 >
                   {isLoading ? (
@@ -294,7 +347,8 @@ export function GameLobby() {
               {[
                 { key: 'quick', label: 'Quick Match' },
                 { key: 'tournament', label: 'Tournament' },
-                { key: 'private', label: 'Private Room' }
+                { key: 'private', label: 'Private Room' },
+                { key: 'single', label: 'Single Player' },
               ].map((mode) => (
                 <Button
                   key={mode.key}
@@ -320,7 +374,7 @@ export function GameLobby() {
             <div className="flex justify-center mt-6">
               <div className="flex items-center gap-2 bg-yellow-400/90 border-2 border-yellow-500 shadow-lg px-8 py-4 rounded-xl">
                 <Coins className="w-6 h-6 text-yellow-700" />
-                <span className="text-2xl font-extrabold text-yellow-900 drop-shadow">Entry Fee: {ENTRY_FEE_SOL} SOL</span>
+                <span className="text-2xl font-extrabold text-yellow-900 drop-shadow">Entry Fee: {getEntryFee()} SOL</span>
               </div>
             </div>
 
@@ -496,6 +550,13 @@ export function GameLobby() {
           )}
         </Card>
       </div>
+
+      {txStatus === 'Match starting...' && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/70">
+          <Loader2 className="w-16 h-16 text-green-400 animate-spin mb-6" />
+          <div className="text-2xl text-green-200 font-bold animate-pulse">Preparing your arena...</div>
+        </div>
+      )}
     </div>
   )
 } 

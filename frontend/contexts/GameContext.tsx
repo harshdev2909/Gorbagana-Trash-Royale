@@ -119,6 +119,9 @@ interface GameContextType {
   // Loading States
   isLoading: boolean
   error: string | null
+  
+  // New function
+  startSinglePlayerMatch: () => Promise<void>
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined)
@@ -184,6 +187,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Real-time player list sync for lobbies
   useEffect(() => {
+    // Prevent multiplayer WebSocket from running in single player mode
+    if (currentMatch && currentMatch.id && currentMatch.id.startsWith('single_')) return;
     const WS_URL = 'wss://trash-royale.onrender.com';
     gameWS.connect(WS_URL);
     function handleLobbyPlayers(players: any) {
@@ -194,7 +199,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       gameWS.off('lobbyPlayers', handleLobbyPlayers)
       gameWS.close();
     }
-  }, [])
+  }, [currentMatch])
 
   // Matchmaking simulation
   const startMatchmaking = useCallback(() => {
@@ -446,6 +451,38 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentMatch])
 
+  const startSinglePlayerMatch = useCallback(async () => {
+    if (!currentPlayer) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Create a match with 1 player and 7 bots
+      const bots = generateMockPlayers(7);
+      const match: MatchData = {
+        id: `single_${Date.now()}`,
+        players: [currentPlayer, ...bots],
+        arenaSize: 1000,
+        currentPhase: 'battle',
+        timeRemaining: 300,
+        totalPlayers: 8,
+        alivePlayers: 8,
+        killFeed: [],
+        upgrades: [
+          { id: 'shield', name: 'Shield Boost', cost: 50, description: '+25 shields' },
+          { id: 'health', name: 'Health Pack', cost: 75, description: '+50 health' },
+          { id: 'speed', name: 'Speed Boost', cost: 100, description: '+20% movement' },
+          { id: 'damage', name: 'Damage Boost', cost: 150, description: '+30% damage' }
+        ]
+      };
+      setCurrentMatch(match);
+      setGameState('battle');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start single player match');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPlayer]);
+
   const value: GameContextType = {
     gameState,
     setGameState,
@@ -472,7 +509,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     eliminatePlayer,
     updateArenaSize,
     isLoading,
-    error
+    error,
+    startSinglePlayerMatch
   }
 
   return (

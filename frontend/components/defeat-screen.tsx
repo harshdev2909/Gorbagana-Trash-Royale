@@ -78,65 +78,61 @@ export function DefeatScreen() {
 
   return (
     <div className="min-h-screen p-6 pt-20 relative z-10">
-      {/* Defeat Animation Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-red-900/30 via-gray-900/20 to-black z-0" />
-      
-      {/* Dark Particle Effect */}
-      <div className="fixed inset-0 pointer-events-none z-10">
-        {[...Array(30)].map((_, i) => (
+      {/* Dramatic Animated Overlay */}
+      <div className="fixed inset-0 bg-gradient-to-br from-red-900/80 via-red-700/60 to-black/80 z-50 animate-fade-in-fast pointer-events-none" />
+      {/* Confetti/Particle Effect */}
+      <div className="fixed inset-0 pointer-events-none z-40">
+        {[...Array(40)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-1 h-1 bg-red-500 rounded-full animate-pulse"
+            className="absolute w-2 h-2 bg-red-400 rounded-full animate-float"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
+              animationDelay: `${Math.random() * 2}s`,
               animationDuration: `${2 + Math.random() * 2}s`,
             }}
           />
         ))}
       </div>
-
-      <div className="max-w-6xl mx-auto relative z-20">
+      <div className="max-w-6xl mx-auto relative z-50">
         {/* Main Defeat Card */}
-        <Card className="bg-gradient-to-br from-red-900/50 to-gray-900/30 border-red-500/50 p-8 text-center mb-8 animate-fade-in">
+        <Card className="bg-gradient-to-br from-red-900/70 to-gray-900/40 border-red-500/70 p-10 text-center mb-8 animate-fade-in animate-pop-in shadow-2xl shadow-red-900/40">
           <div className="mb-6">
-            <Skull className="w-24 h-24 text-red-400 mx-auto mb-4 animate-pulse" />
-            <h1 className="text-6xl font-black bg-gradient-to-r from-red-400 to-gray-400 bg-clip-text text-transparent mb-4">
+            <Skull className="w-28 h-28 text-red-400 mx-auto mb-4 animate-bounce animate-pulse" />
+            <h1 className="text-7xl font-black text-transparent bg-gradient-to-r from-red-500 via-yellow-200 to-red-700 bg-clip-text mb-4 animate-pulse animate-shake">
               ELIMINATED
             </h1>
-            <div className="text-red-300 text-xl">
+            <div className="text-red-200 text-2xl font-bold animate-fade-in-slow">
               {eliminationDetails ? `Eliminated by ${killer?.name || 'Unknown'}` : 'You have been eliminated'}
             </div>
           </div>
-
           {/* Elimination Stats */}
-          <div className="grid grid-cols-3 gap-6 mb-8">
-            <div className="bg-black/40 p-4 rounded-lg border border-red-500/30">
-              <Target className="w-8 h-8 text-red-400 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-red-400">{place}</div>
-              <div className="text-sm text-red-300">PLACE</div>
+          <div className="grid grid-cols-3 gap-6 mb-8 animate-pop-in">
+            <div className="bg-black/60 p-6 rounded-lg border border-red-500/40 shadow-lg animate-fade-in-slow">
+              <Target className="w-10 h-10 text-red-400 mx-auto mb-2 animate-bounce" />
+              <div className="text-3xl font-bold text-red-400 animate-pulse">{place}</div>
+              <div className="text-base text-red-300">PLACE</div>
             </div>
-            <div className="bg-black/40 p-4 rounded-lg border border-red-500/30">
-              <Clock className="w-8 h-8 text-red-400 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-red-400">
+            <div className="bg-black/60 p-6 rounded-lg border border-red-500/40 shadow-lg animate-fade-in-slow">
+              <Clock className="w-10 h-10 text-red-400 mx-auto mb-2 animate-bounce" />
+              <div className="text-3xl font-bold text-red-400 animate-pulse">
                 {survivalTime}m {survivalSeconds}s
               </div>
-              <div className="text-sm text-red-300">SURVIVAL TIME</div>
+              <div className="text-base text-red-300">SURVIVAL TIME</div>
             </div>
-            <div className="bg-black/40 p-4 rounded-lg border border-red-500/30">
-              <TrendingUp className="w-8 h-8 text-red-400 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-red-400">
+            <div className="bg-black/60 p-6 rounded-lg border border-red-500/40 shadow-lg animate-fade-in-slow">
+              <TrendingUp className="w-10 h-10 text-red-400 mx-auto mb-2 animate-bounce" />
+              <div className="text-3xl font-bold text-red-400 animate-pulse">
                 {kills}
               </div>
-              <div className="text-sm text-red-300">ELIMINATIONS</div>
+              <div className="text-base text-red-300">ELIMINATIONS</div>
             </div>
           </div>
-
-          <div className="text-xl font-bold text-red-300 mt-4">
-            Consolation Reward: <span className="text-2xl"><CountUp end={totalConsolation} duration={1.5} separator="," /></span> GORB
+          <div className="text-2xl font-bold text-red-200 mt-4 animate-fade-in-slow">
+            Consolation Reward: <span className="text-3xl"><CountUp end={totalConsolation} duration={1.5} separator="," /></span> GORB
           </div>
-          <div className="grid grid-cols-3 gap-4 text-sm mt-2">
+          <div className="grid grid-cols-3 gap-4 text-lg mt-2 animate-pop-in">
             <div className="text-red-300 animate-pop-in" style={{ animationDelay: '0.1s' }}>
               Base: <CountUp end={baseConsolation} duration={1.2} />
             </div>
@@ -147,33 +143,32 @@ export function DefeatScreen() {
               Survival: +<CountUp end={survivalBonus} duration={1.2} />
             </div>
           </div>
-
           {/* Action Buttons */}
-          <div className="flex justify-center gap-4">
+          <div className="flex justify-center gap-6 mt-8 animate-fade-in-slow">
             <Button
               size="lg"
-              className="bg-red-500 text-white hover:bg-red-600 font-bold px-8"
+              className="bg-red-500 text-white hover:bg-red-600 font-bold px-10 py-3 text-xl animate-pop-in"
               onClick={handleRematch}
             >
-              <RotateCcw className="w-5 h-5 mr-2" />
+              <RotateCcw className="w-6 h-6 mr-2" />
               REMATCH
             </Button>
             <Button
               size="lg"
               variant="outline"
-              className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20 font-bold px-8"
+              className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20 font-bold px-10 py-3 text-xl animate-pop-in"
               onClick={handleSpectate}
             >
-              <Eye className="w-5 h-5 mr-2" />
+              <Eye className="w-6 h-6 mr-2" />
               SPECTATE
             </Button>
             <Button
               size="lg"
               variant="outline"
-              className="border-gray-500/50 text-gray-400 hover:bg-gray-500/20 font-bold px-8"
+              className="border-gray-500/50 text-gray-400 hover:bg-gray-500/20 font-bold px-10 py-3 text-xl animate-pop-in"
               onClick={() => setGameState('lobby')}
             >
-              <Play className="w-5 h-5 mr-2" />
+              <Play className="w-6 h-6 mr-2" />
               LOBBY
             </Button>
           </div>
