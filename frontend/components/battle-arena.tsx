@@ -46,13 +46,18 @@ export function BattleArena() {
   const [chatMessages, setChatMessages] = useState<Array<{id: string, player: string, message: string}>>([])
   const [newChatMessage, setNewChatMessage] = useState("")
   const [upgradeTxStatus, setUpgradeTxStatus] = useState<string | null>(null)
-  const moveStep = 40; // much faster movement
+  const moveStep = 40; // Good speed for all players and bots, all modes
   const arenaMin = 0;
   const arenaMax = 1000;
   const toastTimeout = useRef<NodeJS.Timeout | null>(null);
   const movementKeys = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d", "W", "A", "S", "D"]);
   const [boosted, setBoosted] = useState(false); // For upgrade effect
   const [buyingUpgradeId, setBuyingUpgradeId] = useState<string | null>(null); // Track which upgrade is being purchased
+  const [timerFinished, setTimerFinished] = useState<string | null>(null);
+  const shrinkTimerInitialized = useRef<string | null>(null);
+  const [arenaShrinkCount, setArenaShrinkCount] = useState(0);
+  const MIN_ARENA_SIZE = 200;
+  const lastMatchId = useRef<string | null>(null);
 
   // Demo/mock players if needed
   const demoPlayers = useMemo(() => {
@@ -106,7 +111,7 @@ export function BattleArena() {
       }
     };
     const handlePlayerEliminated = (data: any) => eliminatePlayer(data.playerId, data.killerId);
-    const handleArenaShrinking = (data: any) => { updateArenaSize(data.newSize); setShrinkTimer(data.timeRemaining); };
+    const handleArenaShrinking = (data: any) => { updateArenaSize(data.newSize); };
     const handleChatMessage = (data: any) => {
       setChatMessages(prev => [...prev, {
         id: Date.now().toString(),
@@ -126,19 +131,7 @@ export function BattleArena() {
     gameWS.on('chat-message', handleChatMessage)
     gameWS.on('victory', handleVictory)
 
-    // Arena shrinking timer
-    const timer = setInterval(() => {
-      setShrinkTimer((prev) => {
-        if (prev <= 1) {
-          setGameState('victory');
-          return 0;
-        }
-        return prev - 1;
-      })
-    }, 1000)
-
     return () => {
-      clearInterval(timer)
       gameWS.off('player-updated', handlePlayerUpdated)
       gameWS.off('player-eliminated', handlePlayerEliminated)
       gameWS.off('arena-shrinking', handleArenaShrinking)
@@ -269,22 +262,26 @@ export function BattleArena() {
   }, [gorbBalance, isLoading]);
 
   // --- Timer Logic (never stuck, highest health wins at end) ---
-  const shrinkTimerInitialized = useRef<string | null>(null);
-  const timerFinished = useRef<string | null>(null);
   useEffect(() => {
-    if (!currentMatch) return;
-    // Always reset timer and finished flag on match change
-    if (shrinkTimerInitialized.current !== currentMatch.id) {
-      shrinkTimerInitialized.current = currentMatch.id;
+    if (!currentMatch?.id) return;
+
+    // Only reset timer if match id truly changes
+    if (lastMatchId.current !== currentMatch.id) {
+      lastMatchId.current = currentMatch.id;
       setShrinkTimer(30);
-      timerFinished.current = null;
+      setTimerFinished(null);
     }
-    // Always run the timer for the current match
+
     const timer = setInterval(() => {
       setShrinkTimer(prev => {
-        if (prev <= 1 && timerFinished.current !== currentMatch.id) {
-          timerFinished.current = currentMatch.id;
-          // At timer end, highest health wins (tie = all win)
+        console.log("Shrink timer tick:", prev); // Debug log
+        if (prev <= 1 && timerFinished !== currentMatch.id) {
+          setTimerFinished(currentMatch.id);
+          // Shrink arena once if not at minimum size
+          if (currentMatch.arenaSize > 200) {
+            updateArenaSize(200);
+          }
+          // After 30s, determine winner by health
           if (!currentMatch || !currentPlayer) return 0;
           const alive = currentMatch.players.filter(p => p.isAlive && p.health > 0);
           if (alive.length === 0) {
@@ -304,8 +301,9 @@ export function BattleArena() {
         return prev - 1;
       });
     }, 1000);
+
     return () => clearInterval(timer);
-  }, [currentMatch, setGameState, currentPlayer]);
+  }, [currentMatch?.id, timerFinished, updateArenaSize]);
 
   // --- Danger zone logic: reduce health by fixed amount if outside ---
   useEffect(() => {
@@ -383,6 +381,7 @@ export function BattleArena() {
   // For bots: skip movement if health is 0
   useEffect(() => {
     if (!currentMatch || !currentPlayer) return;
+    // Always run bot movement, even in single player mode
     const botMoveInterval = setInterval(() => {
       const bots = currentMatch.players.filter(p => p.id !== currentPlayer.id && p.isAlive && p.health > 0);
       bots.forEach(bot => {
@@ -422,8 +421,12 @@ export function BattleArena() {
 
   return (
     <div className="min-h-screen p-4 pt-20 relative z-10">
+      {/* Backend Info Banner - now just below nav, above all content */}
+      <div className="w-full bg-yellow-900 text-yellow-200 text-center py-2 rounded shadow-lg font-semibold mb-6 fixed left-0 right-0 top-16 z-50" style={{maxWidth: '100vw'}}>
+        ⚠️ The backend is deployed on a free instance, so some things may load late.
+      </div>
       {/* Top HUD */}
-      <div className="fixed top-20 left-0 right-0 z-40 px-6">
+      <div className="fixed top-28 left-0 right-0 z-40 px-6 mt-4"> {/* mt-4 for spacing below banner */}
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           {/* Health & Shield */}
           <div className="flex items-center gap-4">

@@ -58,7 +58,7 @@ export function GameLobby() {
   const { addTransaction, transactions } = useTransactionHistory()
   const { toast } = useToast()
 
-  const [selectedGameMode, setSelectedGameMode] = useState<'quick' | 'tournament' | 'private' | 'single'>('quick')
+  const [selectedGameMode, setSelectedGameMode] = useState<'single' | 'quick' | 'tournament' | 'private'>('single')
   const [selectedAvatar, setSelectedAvatar] = useState('Garbage Bot')
   const [error, setError] = useState<string | null>(null)
   const [playerCount, setPlayerCount] = useState(2)
@@ -206,11 +206,42 @@ export function GameLobby() {
 
   return (
     <div className="min-h-screen p-6 pt-20 relative z-10">
+      {/* Backend Info Banner - now static, with normal margin */}
+      <div className="w-full bg-yellow-900 text-yellow-200 text-center py-2 rounded shadow-lg font-semibold mb-4">
+        ⚠️ The backend is deployed on a free instance, so some things may load late.
+      </div>
       {/* Main Title */}
       <div className="text-center mb-8">
         <h1 className="text-8xl font-black bg-gradient-to-r from-green-400 via-purple-400 to-gold-400 bg-clip-text text-transparent mb-4 animate-pulse drop-shadow-lg">
           TRASH ROYALE
         </h1>
+        {/* Game Mode Selection - single player first and default */}
+        <div className="flex items-center justify-center gap-4 text-green-400 mb-6">
+          <button
+            className={`px-6 py-2 rounded-lg font-bold border-2 transition-all ${selectedGameMode === 'single' ? 'bg-green-600 text-white border-green-400' : 'bg-black/80 border-green-500/50 text-green-300 hover:bg-green-700'}`}
+            onClick={() => setSelectedGameMode('single')}
+          >
+            Single Player
+          </button>
+          <button
+            className={`px-6 py-2 rounded-lg font-bold border-2 transition-all ${selectedGameMode === 'quick' ? 'bg-blue-600 text-white border-blue-400' : 'bg-black/80 border-blue-500/50 text-blue-300 hover:bg-blue-700'}`}
+            onClick={() => setSelectedGameMode('quick')}
+          >
+            Quick Match
+          </button>
+          <button
+            className={`px-6 py-2 rounded-lg font-bold border-2 transition-all ${selectedGameMode === 'tournament' ? 'bg-purple-600 text-white border-purple-400' : 'bg-black/80 border-purple-500/50 text-purple-300 hover:bg-purple-700'}`}
+            onClick={() => setSelectedGameMode('tournament')}
+          >
+            Tournament
+          </button>
+          <button
+            className={`px-6 py-2 rounded-lg font-bold border-2 transition-all ${selectedGameMode === 'private' ? 'bg-yellow-600 text-white border-yellow-400' : 'bg-black/80 border-yellow-500/50 text-yellow-300 hover:bg-yellow-700'}`}
+            onClick={() => setSelectedGameMode('private')}
+          >
+            Private Room
+          </button>
+        </div>
         <div className="flex items-center justify-center gap-4 text-green-400">
           {connected ? (
             <>
