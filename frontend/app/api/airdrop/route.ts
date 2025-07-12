@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: '500 GORB has been sent to your wallet 🎉',
+      message: '500 GORB has been sent to your wallet in-game wallet soon. 🎉',
       data: airdropData
     })
   } catch (error) {

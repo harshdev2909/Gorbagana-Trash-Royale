@@ -1,49 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import fs from 'fs'
-import path from 'path'
+import { MongoClient } from 'mongodb'
 
-const WAITLIST_FILE = path.join(process.cwd(), 'data', 'waitlist.json')
+const uri = process.env.MONGODB_URI as string
+const dbName = process.env.MONGODB_DB as string
 
-// Ensure data directory exists
-const ensureDataDir = () => {
-  const dataDir = path.dirname(WAITLIST_FILE)
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true })
-  }
+if (!uri || !dbName) {
+  throw new Error('Please define MONGODB_URI and MONGODB_DB in your environment variables')
 }
 
-// Read waitlist data
-const readWaitlist = () => {
-  ensureDataDir()
-  if (!fs.existsSync(WAITLIST_FILE)) {
-    return []
-  }
-  try {
-    const data = fs.readFileSync(WAITLIST_FILE, 'utf-8')
-    return JSON.parse(data)
-  } catch (error) {
-    console.error('Error reading waitlist:', error)
-    return []
-  }
-}
+let cachedClient: MongoClient | null = null
 
-// Write waitlist data
-const writeWaitlist = (data: any[]) => {
-  ensureDataDir()
-  try {
-    fs.writeFileSync(WAITLIST_FILE, JSON.stringify(data, null, 2))
-  } catch (error) {
-    console.error('Error writing waitlist:', error)
-    throw error
-  }
+async function getClient() {
+  if (cachedClient) return cachedClient
+  const client = new MongoClient(uri)
+  await client.connect()
+  cachedClient = client
+  return client
 }
 
 export async function GET() {
   try {
-    const waitlist = readWaitlist()
-    return NextResponse.json({ 
+    const client = await getClient()
+    const db = client.db(dbName)
+    const waitlist = await db.collection('waitlist').find({}).toArray()
+    return NextResponse.json({
       count: waitlist.length,
-      entries: waitlist 
+      entries: waitlist
     })
   } catch (error) {
     return NextResponse.json(
@@ -82,12 +64,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const waitlist = readWaitlist()
-    
+    const client = await getClient()
+    const db = client.db(dbName)
+    const collection = db.collection('waitlist')
+
     // Check for duplicates on both fields
-    const isDuplicate = waitlist.some((entry: any) => 
-      entry.walletAddress === walletAddress || entry.email === email
-    )
+    const isDuplicate = await collection.findOne({
+      $or: [
+        { walletAddress },
+        { email }
+      ]
+    })
 
     if (isDuplicate) {
       return NextResponse.json(
@@ -98,19 +85,18 @@ export async function POST(request: NextRequest) {
 
     // Add new entry
     const newEntry = {
-      id: Date.now().toString(),
       walletAddress,
       email,
       timestamp: Date.now()
     }
 
-    waitlist.push(newEntry)
-    writeWaitlist(waitlist)
+    await collection.insertOne(newEntry)
+    const count = await collection.countDocuments()
 
     return NextResponse.json({
       success: true,
       message: "You're in! 500 GORB tokens await you in the beta.",
-      count: waitlist.length
+      count
     })
   } catch (error) {
     console.error('Waitlist signup error:', error)
